@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPCB 캐파 계산기</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+:root {
+  --bg:#f0f4f8; --surface:#fff; --border:#dde3ec;
+  --accent:#1a7fd4; --green:#1a9e5c; --yellow:#b8860b; --red:#c0392b;
+  --text:#1a2333; --muted:#6b7f99;
+  --c-h:#7c3aed; --c-v:#1a7fd4; --c-t:#d4761a;
+  --shadow:0 1px 5px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 80px;}
+.wrap{max-width:1080px;margin:0 auto;}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:22px;}
+.hdr-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;
+  color:var(--accent);background:rgba(26,127,212,.08);border:1px solid rgba(26,127,212,.2);
+  padding:4px 14px;border-radius:20px;margin-bottom:8px;}
+.hdr h1{font-size:22px;font-weight:700;}
+.hdr h1 em{font-style:normal;color:var(--accent);}
+.hdr p{font-size:12px;color:var(--muted);margin-top:4px;}
+
+/* Sec */
+.sec{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow);}
+
+/* Grid */
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;}
+
+/* Field */
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:11px;color:var(--muted);}
+.fu{display:flex;align-items:center;background:#f8fafc;border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;transition:border-color .2s;}
+.fu:focus-within{border-color:var(--accent);}
+.fu input{flex:1;background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:13px;padding:7px 10px;min-width:0;}
+.fu .u{font-size:10px;color:var(--muted);padding:0 9px;background:rgba(0,0,0,.04);
+  align-self:stretch;display:flex;align-items:center;white-space:nowrap;border-left:1px solid var(--border);}
+
+/* Auto row */
+.auto-box{background:rgba(26,127,212,.04);border:1px solid rgba(26,127,212,.14);
+  border-radius:8px;padding:8px 12px;margin-top:10px;}
+.ar{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;
+  border-bottom:1px solid rgba(180,200,220,.4);}
+.ar:last-child{border-bottom:none;}
+.ar .ak{color:var(--muted);}
+.ar .av{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);}
+
+/* ══ GROUP ══ */
+.group-list{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+
+.group-header{display:flex;align-items:center;gap:10px;padding:11px 16px;
+  border-bottom:1px solid var(--border);position:relative;}
+.group-header::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.group-card.type-h .group-header::before{background:var(--c-h);}
+.group-card.type-v .group-header::before{background:var(--c-v);}
+.group-card.type-t .group-header::before{background:var(--c-t);}
+
+.group-name-input{flex:1;background:transparent;border:none;border-bottom:1px dashed transparent;
+  outline:none;color:var(--text);font-family:'Noto Sans KR',sans-serif;
+  font-size:14px;font-weight:700;padding-bottom:1px;transition:border-color .2s;min-width:0;}
+.group-name-input:hover{border-color:var(--border);}
+.group-name-input:focus{border-color:var(--accent);}
+
+/* 타입 토글 */
+.type-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;}
+.type-btn{padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  border:none;background:transparent;transition:all .2s;color:var(--muted);
+  font-family:'Noto Sans KR',sans-serif;white-space:nowrap;}
+.type-btn+.type-btn{border-left:1px solid var(--border);}
+.type-btn.act-h{background:rgba(124,58,237,.1);color:var(--c-h);}
+.type-btn.act-v{background:rgba(26,127,212,.1);color:var(--c-v);}
+.type-btn.act-t{background:rgba(212,118,26,.1);color:var(--c-t);}
+
+.group-capa-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:10px;flex-shrink:0;
+  background:#f0f4f8;color:var(--muted);border:1px solid var(--border);min-width:120px;text-align:right;}
+.group-capa-badge.rh{color:var(--c-h);background:rgba(124,58,237,.06);border-color:rgba(124,58,237,.2);}
+.group-capa-badge.rv{color:var(--c-v);background:rgba(26,127,212,.06);border-color:rgba(26,127,212,.2);}
+.group-capa-badge.rt{color:var(--c-t);background:rgba(212,118,26,.06);border-color:rgba(212,118,26,.2);}
+
+.btn-del-group{background:transparent;color:var(--muted);border:none;
+  cursor:pointer;font-size:16px;padding:2px 6px;transition:color .2s;flex-shrink:0;}
+.btn-del-group:hover{color:var(--red);}
+
+/* 수평 전용 피치 설정 */
+.horiz-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;
+  padding:12px 16px;background:#faf8ff;border-bottom:1px solid var(--border);}
+.horiz-settings-title{font-size:10px;color:var(--c-h);font-weight:700;letter-spacing:.5px;
+  grid-column:1/-1;margin-bottom:2px;}
+.pitch-display{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);
+  grid-column:1/-1;font-family:'JetBrains Mono',monospace;}
+.pitch-display strong{color:var(--c-h);}
+
+/* 공식 힌트 */
+.formula-hint{font-size:10px;color:var(--muted);padding:6px 16px;
+  font-family:'JetBrains Mono',monospace;border-bottom:1px solid var(--border);
+  background:#fafbfc;}
+
+/* Equip list */
+.equip-list{padding:8px 16px 0;}
+
+/* col labels */
+.col-labels{display:grid;gap:8px;padding:2px 10px 4px;font-size:9px;color:var(--muted);letter-spacing:.3px;}
+.col-labels.cl-h{grid-template-columns:1fr 150px 130px auto;}
+.col-labels.cl-v{grid-template-columns:1fr 85px 85px 90px 130px auto;}
+.col-labels.cl-t{grid-template-columns:1fr 120px 120px 130px auto;}
+.cr{text-align:right;}
+
+/* Equip row */
+.equip-row{display:grid;gap:8px;align-items:center;
+  padding:7px 10px;margin-bottom:7px;
+  background:#f8fafc;border:1px solid var(--border);border-radius:10px;transition:border-color .2s;}
+.equip-row:hover{border-color:rgba(26,127,212,.2);}
+.equip-row.er-h{grid-template-columns:1fr 150px 130px auto;}
+.equip-row.er-v{grid-template-columns:1fr 85px 85px 90px 130px auto;}
+.equip-row.er-t{grid-template-columns:1fr 120px 120px 130px auto;}
+
+.equip-name-input{background:transparent;border:none;border-bottom:1px dashed transparent;
+  outline:none;color:var(--text);font-family:'Noto Sans KR',sans-serif;
+  font-size:12px;font-weight:600;padding-bottom:1px;width:100%;transition:border-color .2s;}
+.equip-name-input:hover{border-color:var(--border);}
+.equip-name-input:focus{border-color:var(--accent);}
+
+.eq-fu{display:flex;align-items:center;background:#fff;border:1px solid var(--border);
+  border-radius:6px;overflow:hidden;transition:border-color .2s;}
+.eq-fu:focus-within{border-color:var(--accent);}
+.eq-fu input{flex:1;background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:5px 8px;min-width:0;}
+.eq-fu .eu{font-size:10px;color:var(--muted);padding:0 6px;background:rgba(0,0,0,.03);
+  align-self:stretch;display:flex;align-items:center;border-left:1px solid var(--border);white-space:nowrap;}
+
+/* 면수 셀렉트 */
+.eq-sel{display:flex;align-items:center;background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.eq-sel select{flex:1;background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:5px 8px;cursor:pointer;min-width:0;}
+.eq-sel .eu{font-size:10px;color:var(--muted);padding:0 6px;background:rgba(0,0,0,.03);
+  align-self:stretch;display:flex;align-items:center;border-left:1px solid var(--border);white-space:nowrap;}
+
+.equip-capa{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  color:var(--accent);text-align:right;white-space:nowrap;}
+.btn-del-eq{background:transparent;border:none;color:var(--muted);
+  cursor:pointer;font-size:14px;padding:2px 6px;transition:color .2s;}
+.btn-del-eq:hover{color:var(--red);}
+
+.btn-add-equip{display:flex;align-items:center;gap:6px;margin:4px 16px 12px;
+  padding:6px 12px;background:transparent;border:1px dashed var(--border);border-radius:8px;
+  color:var(--muted);font-size:11px;cursor:pointer;transition:all .2s;font-family:'Noto Sans KR',sans-serif;}
+.btn-add-equip:hover{color:var(--accent);border-color:var(--accent);}
+
+/* Group sum */
+.group-sum{display:flex;gap:20px;flex-wrap:wrap;padding:8px 16px 12px;
+  border-top:1px solid var(--border);margin-top:2px;font-size:11px;}
+.gs-item .gk{color:var(--muted);margin-bottom:2px;}
+.gs-item .gv{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:13px;}
+
+/* 그룹 추가 */
+.btn-add-group{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:11px;background:transparent;border:1px dashed var(--border);border-radius:12px;
+  color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s;
+  font-family:'Noto Sans KR',sans-serif;margin-bottom:16px;}
+.btn-add-group:hover{color:var(--accent);border-color:var(--accent);background:rgba(26,127,212,.03);}
+
+/* Calc */
+.btn-calc{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;
+  border-radius:12px;font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;margin-bottom:24px;}
+.btn-calc:hover{background:#1565c0;box-shadow:0 4px 16px rgba(26,127,212,.3);transform:translateY(-1px);}
+
+/* ══ RESULTS ══ */
+.results{display:none;}
+.results.on{display:block;animation:fu .35s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;text-align:center;box-shadow:var(--shadow);}
+.sum-card.hl{border-color:rgba(26,127,212,.3);background:rgba(26,127,212,.04);}
+.sum-card .lbl{font-size:10px;color:var(--muted);margin-bottom:6px;}
+.sum-card .val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--accent);}
+.sum-card .sub{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* Balance */
+.balance-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow);}
+.bal-hd{font-size:12px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.bal-row{display:grid;grid-template-columns:170px 1fr 120px 60px;gap:10px;align-items:center;margin-bottom:8px;}
+.bal-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bal-bar-wrap{height:26px;background:#edf2f7;border-radius:6px;overflow:hidden;}
+.bal-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;
+  font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;
+  transition:width .7s cubic-bezier(.4,0,.2,1);white-space:nowrap;}
+.bal-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-align:right;}
+.bal-sub{font-size:10px;color:var(--muted);text-align:right;}
+
+/* Detail */
+.det-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.det-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;
+  padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.det-card.bn-card{border-color:var(--red);}
+.det-top-bar{position:absolute;top:0;left:0;right:0;height:3px;}
+.det-card.type-h .det-top-bar{background:var(--c-h);}
+.det-card.type-v .det-top-bar{background:var(--c-v);}
+.det-card.type-t .det-top-bar{background:var(--c-t);}
+.det-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.det-name{font-size:13px;font-weight:700;}
+.det-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:8px;}
+.det-tag.ok{background:rgba(26,158,92,.08);color:var(--green);border:1px solid rgba(26,158,92,.2);}
+.det-tag.bn{background:rgba(192,57,43,.08);color:var(--red);border:1px solid rgba(192,57,43,.2);}
+.det-rows{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+.det-row{display:flex;justify-content:space-between;font-size:11px;}
+.det-row .dk{color:var(--muted);}
+.det-row .dv{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.det-row .dv.big{font-size:14px;}
+.det-equips{border-top:1px solid var(--border);padding-top:8px;}
+.det-equips-title{font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px;}
+.det-eq-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;
+  font-size:10px;padding:3px 0;border-bottom:1px solid rgba(200,215,230,.4);}
+.det-eq-row:last-child{border-bottom:none;}
+.det-eq-row .ev{font-family:'JetBrains Mono',monospace;text-align:right;color:var(--muted);}
+.det-eq-row .ev.ac{color:var(--accent);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-badge">FPCB · CAPACITY CALCULATOR</div>
+  <h1>공정별 <em>캐파</em> 계산기</h1>
+  <p>
+    <span style="color:var(--c-h);font-weight:700;">■</span> 수평(속도) &nbsp;
+    <span style="color:var(--c-v);font-weight:700;">■</span> 수직(바스켓) &nbsp;
+    <span style="color:var(--c-t);font-weight:700;">■</span> Takt Time
+    &nbsp;· 그룹 &gt; 설비 구조
+  </p>
+</div>
+
+<!-- 공통 조건: 운영 조건만 -->
+<div class="sec">운영 공통 조건</div>
+<div class="card">
+  <div class="g4">
+    <div class="field"><label>일 가동 시간</label>
+      <div class="fu"><input type="number" id="g_hr" value="20" step="0.5" min="1" max="24"><span class="u">hr/day</span></div>
+    </div>
+    <div class="field"><label>월 가동 일수</label>
+      <div class="fu"><input type="number" id="g_day" value="25" step="1" min="1" max="31"><span class="u">day/월</span></div>
+    </div>
+    <div class="field"><label>OEE</label>
+      <div class="fu"><input type="number" id="g_oee" value="85" step="1" min="1" max="100"><span class="u">%</span></div>
+    </div>
+    <div class="field"><label>수율 (Yield)</label>
+      <div class="fu"><input type="number" id="g_yld" value="98" step="0.1" min="1" max="100"><span class="u">%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 그룹 -->
+<div class="sec">공정 그룹 구성</div>
+<div class="group-list" id="group-list"></div>
+<button class="btn-add-group" onclick="addGroup()">＋ 그룹 추가</button>
+<button class="btn-calc" onclick="calculate()">▶ 캐파 / 밸런스 분석</button>
+
+<!-- 결과 -->
+<div class="results" id="results">
+  <div class="sec">분석 결과</div>
+  <div class="sum-grid" id="sum-grid"></div>
+  <div class="balance-card">
+    <div class="bal-hd">📊 그룹별 밸런스
+      <span style="font-size:10px;color:var(--muted);font-weight:400;">병목 기준 상대 캐파</span>
+    </div>
+    <div class="bal-row" style="margin-bottom:6px;">
+      <span style="font-size:10px;color:var(--muted);">그룹명</span>
+      <span style="font-size:10px;color:var(--muted);">상대 캐파</span>
+      <span style="font-size:10px;color:var(--muted);text-align:right;">月 캐파 (m²)</span>
+      <span style="font-size:10px;color:var(--muted);text-align:right;">설비수</span>
+    </div>
+    <div id="bal-rows"></div>
+  </div>
+  <div class="sec">그룹별 상세</div>
+  <div class="det-grid" id="det-grid"></div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════
+// 데이터
+// ═══════════════════════
+let gid=0, eid=0;
+const groups=[];
+const TYPE_COLOR={'h':'var(--c-h)','v':'var(--c-v)','t':'var(--c-t)'};
+const TYPE_LABEL={'h':'수평','v':'수직','t':'Takt'};
+const TYPE_FORMULA={
+  'h':'캐파 = 속도(m/min) ÷ 피치(m) × 제품길이(m) × 60',
+  'v':'캐파 = 3600 ÷ 사이클타임(초) × 판넬수 × 면적(m²)',
+  't':'캐파 = 3600 ÷ (Takt초 × 면수) → pnl/hr × 면적(m²)',
+};
+
+function n(id){const e=document.getElementById(id);return e?parseFloat(e.value):NaN;}
+
+// ═══════════════════════
+// 그룹
+// ═══════════════════════
+function addGroup(cfg={}){
+  gid++;
+  const g={id:gid, name:cfg.name||`그룹 ${gid}`, type:cfg.type||'h', equips:[],
+    // 수평 전용 피치 설정
+    jig:cfg.jig||150, gap:cfg.gap||100, pLen:cfg.pLen||500, pWid:cfg.pWid||400};
+  groups.push(g);
+  renderGroup(g);
+  if(cfg.equips) cfg.equips.forEach(e=>addEquip(g.id,e));
+  else addEquip(g.id);
+}
+
+function removeGroup(gId){
+  const i=groups.findIndex(g=>g.id===gId); if(i<0)return;
+  groups.splice(i,1);
+  document.getElementById(`gc-${gId}`)?.remove();
+}
+
+function setGroupType(gId,type){
+  const g=groups.find(x=>x.id===gId); if(!g)return;
+  if(g.equips.length>0&&!confirm('타입을 변경하면 설비 설정이 초기화됩니다. 계속하시겠습니까?'))return;
+  g.type=type; g.equips=[];
+  // 카드 재렌더
+  const old=document.getElementById(`gc-${gId}`);
+  const next=old.nextSibling;
+  const list=old.parentNode;
+  old.remove();
+  const tempDiv=document.createElement('div');
+  list.insertBefore(tempDiv,next);
+  const idx=groups.findIndex(x=>x.id===gId);
+  // 임시 DOM 교체
+  renderGroupInto(g,tempDiv);
+  addEquip(gId);
+  liveAll();
+}
+
+// ═══════════════════════
+// 설비
+// ═══════════════════════
+function addEquip(gId,cfg={}){
+  eid++;
+  const id=eid;
+  const g=groups.find(x=>x.id===gId); if(!g)return;
+  const num=g.equips.length+1;
+  const defName=g.type==='h'?`${g.name} ${num}호기`:g.type==='v'?`Line #${num}`:`${g.name} #${num}`;
+  const eq={id,gId,
+    name:cfg.name||defName,
+    spd:cfg.spd||3.0,
+    ctm:cfg.ctm!==undefined?cfg.ctm:6, cts:cfg.cts!==undefined?cfg.cts:30, pnl:cfg.pnl||60,
+    takt:cfg.takt||30, sides:cfg.sides||1,
+  };
+  g.equips.push(eq);
+  renderEquip(g,eq);
+  liveAll();
+}
+
+function removeEquip(gId,eId){
+  const g=groups.find(x=>x.id===gId); if(!g)return;
+  const i=g.equips.findIndex(e=>e.id===eId); if(i<0)return;
+  g.equips.splice(i,1);
+  document.getElementById(`eq-${eId}`)?.remove();
+  liveAll();
+}
+
+// ═══════════════════════
+// 렌더링
+// ═══════════════════════
+function colHTML(type){
+  if(type==='h') return `<span>설비명</span><span></span><span class="cr">캐파/hr</span><span></span>`;
+  if(type==='v') return `<span>설비명</span><span class="cr">분</span><span class="cr">초</span><span class="cr">판넬</span><span class="cr">캐파/hr</span><span></span>`;
+  return `<span>설비명</span><span class="cr">Takt (초)</span><span class="cr">면수</span><span class="cr">캐파/hr</span><span></span>`;
+}
+
+function groupCardHTML(g){
+  const t=g.type;
+  const horizSettings = t==='h' ? `
+    <div class="horiz-settings">
+      <div class="horiz-settings-title">▪ 수평 설정 (피치 · 제품 크기)</div>
+      <div class="field"><label>제품 길이 (이송 수직방향)</label>
+        <div class="fu"><input type="number" id="gl-${g.id}" value="${g.pLen}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="field"><label>제품 폭 (이송 방향)</label>
+        <div class="fu"><input type="number" id="gw-${g.id}" value="${g.pWid}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="field"><label>아대 폭</label>
+        <div class="fu"><input type="number" id="gj-${g.id}" value="${g.jig}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="field"><label>제품 간격</label>
+        <div class="fu"><input type="number" id="gg-${g.id}" value="${g.gap}" step="1" min="0" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="pitch-display" id="gpd-${g.id}">피치 계산 중...</div>
+    </div>` : '';
+
+  const vertSettings = t==='v' ? `
+    <div class="horiz-settings" style="background:#f0f8ff;">
+      <div class="horiz-settings-title" style="color:var(--c-v);">▪ 수직 설정 (제품 면적)</div>
+      <div class="field"><label>제품 길이</label>
+        <div class="fu"><input type="number" id="gl-${g.id}" value="${g.pLen||500}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="field"><label>제품 폭</label>
+        <div class="fu"><input type="number" id="gw-${g.id}" value="${g.pWid||400}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="pitch-display" id="gpd-${g.id}">면적 계산 중...</div>
+    </div>` : '';
+
+  const taktSettings = t==='t' ? `
+    <div class="horiz-settings" style="background:#fff8f0;">
+      <div class="horiz-settings-title" style="color:var(--c-t);">▪ Takt 설정 (제품 면적)</div>
+      <div class="field"><label>제품 길이</label>
+        <div class="fu"><input type="number" id="gl-${g.id}" value="${g.pLen||500}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="field"><label>제품 폭</label>
+        <div class="fu"><input type="number" id="gw-${g.id}" value="${g.pWid||400}" step="1" min="1" oninput="syncGroupSettings(${g.id})"><span class="u">mm</span></div>
+      </div>
+      <div class="pitch-display" id="gpd-${g.id}">면적 계산 중...</div>
+    </div>` : '';
+
+  return `
+    <div class="group-header">
+      <input class="group-name-input" type="text" id="gn-${g.id}" value="${g.name}" placeholder="그룹명">
+      <div class="type-toggle">
+        <button class="type-btn${t==='h'?' act-h':''}" data-t="h" onclick="setGroupType(${g.id},'h')">수평</button>
+        <button class="type-btn${t==='v'?' act-v':''}" data-t="v" onclick="setGroupType(${g.id},'v')">수직</button>
+        <button class="type-btn${t==='t'?' act-t':''}" data-t="t" onclick="setGroupType(${g.id},'t')">Takt</button>
+      </div>
+      <div class="group-capa-badge" id="gcb-${g.id}">- m²/hr</div>
+      <button class="btn-del-group" onclick="removeGroup(${g.id})" title="그룹 삭제">✕</button>
+    </div>
+    ${horizSettings}${vertSettings}${taktSettings}
+    <div class="formula-hint" style="color:${TYPE_COLOR[t]}">${TYPE_FORMULA[t]}</div>
+    <div class="equip-list" id="el-${g.id}">
+      <div class="col-labels cl-${t}" id="ecl-${g.id}">${colHTML(t)}</div>
+    </div>
+    <button class="btn-add-equip" onclick="addEquip(${g.id})">＋ 설비 추가</button>
+    <div class="group-sum" id="gs-${g.id}" style="display:none;">
+      <div class="gs-item"><div class="gk">이론 캐파/hr</div><div class="gv" id="gst-${g.id}">-</div></div>
+      <div class="gs-item"><div class="gk">일 캐파</div><div class="gv" id="gsd-${g.id}">-</div></div>
+      <div class="gs-item"><div class="gk">月 캐파</div><div class="gv" id="gsm-${g.id}">-</div></div>
+    </div>
+  `;
+}
+
+function renderGroup(g){
+  const list=document.getElementById('group-list');
+  const card=document.createElement('div');
+  card.className=`group-card type-${g.type}`;
+  card.id=`gc-${g.id}`;
+  card.innerHTML=groupCardHTML(g);
+  list.appendChild(card);
+  bindGroupEvents(g);
+}
+
+function renderGroupInto(g,placeholder){
+  const card=document.createElement('div');
+  card.className=`group-card type-${g.type}`;
+  card.id=`gc-${g.id}`;
+  card.innerHTML=groupCardHTML(g);
+  placeholder.replaceWith(card);
+  bindGroupEvents(g);
+}
+
+function bindGroupEvents(g){
+  document.getElementById(`gn-${g.id}`)?.addEventListener('input',e=>{g.name=e.target.value;});
+  // 설정 필드
+  ['gl','gw','gj','gg'].forEach(pfx=>{
+    document.getElementById(`${pfx}-${g.id}`)?.addEventListener('input',()=>syncGroupSettings(g.id));
+  });
+  syncGroupSettings(g.id);
+}
+
+function syncGroupSettings(gId){
+  const g=groups.find(x=>x.id===gId); if(!g)return;
+  const pLen=n(`gl-${gId}`)||500, pWid=n(`gw-${gId}`)||400;
+  g.pLen=pLen; g.pWid=pWid;
+  const pdEl=document.getElementById(`gpd-${gId}`);
+  if(g.type==='h'){
+    const jig=n(`gj-${gId}`)||150, gap=n(`gg-${gId}`)||100;
+    g.jig=jig; g.gap=gap;
+    const pitch=jig+gap;
+    const area=(pLen/1000)*(pWid/1000);
+    if(pdEl) pdEl.innerHTML=`피치 <strong>${pitch} mm</strong> &nbsp;=&nbsp; 아대 ${jig} + 간격 ${gap} &nbsp;·&nbsp; 제품면적 <strong>${area.toFixed(4)} m²</strong>`;
+  } else {
+    const area=(pLen/1000)*(pWid/1000);
+    if(pdEl) pdEl.innerHTML=`제품 면적 <strong>${area.toFixed(4)} m²</strong> &nbsp;(${pLen}×${pWid} mm)`;
+  }
+  liveAll();
+}
+
+function equipRowHTML(g,eq){
+  const t=g.type;
+  if(t==='h') return `
+    <input class="equip-name-input" type="text" id="en-${eq.id}" value="${eq.name}" placeholder="설비명">
+    <div class="eq-fu"><input type="number" id="es-${eq.id}" value="${eq.spd}" step="0.1" min="0.1" oninput="liveAll()"><span class="eu">m/min</span></div>
+    <div class="equip-capa" id="ec-${eq.id}">-</div>
+    <button class="btn-del-eq" onclick="removeEquip(${g.id},${eq.id})">✕</button>`;
+  if(t==='v') return `
+    <input class="equip-name-input" type="text" id="en-${eq.id}" value="${eq.name}" placeholder="설비명">
+    <div class="eq-fu"><input type="number" id="em-${eq.id}" value="${eq.ctm}" step="1" min="0" max="59" oninput="liveAll()"><span class="eu">분</span></div>
+    <div class="eq-fu"><input type="number" id="esc-${eq.id}" value="${eq.cts}" step="1" min="0" max="59" oninput="liveAll()"><span class="eu">초</span></div>
+    <div class="eq-fu"><input type="number" id="ep-${eq.id}" value="${eq.pnl}" step="1" min="1" oninput="liveAll()"><span class="eu">pnl</span></div>
+    <div class="equip-capa" id="ec-${eq.id}">-</div>
+    <button class="btn-del-eq" onclick="removeEquip(${g.id},${eq.id})">✕</button>`;
+  // Takt - 대수 없음, 설비 추가로 통일
+  return `
+    <input class="equip-name-input" type="text" id="en-${eq.id}" value="${eq.name}" placeholder="설비명">
+    <div class="eq-fu"><input type="number" id="et-${eq.id}" value="${eq.takt}" step="0.1" min="0.1" oninput="liveAll()"><span class="eu">초/pnl</span></div>
+    <div class="eq-sel">
+      <select id="esid-${eq.id}" onchange="liveAll()">
+        <option value="1"${eq.sides===1?' selected':''}>단면 (×1)</option>
+        <option value="2"${eq.sides===2?' selected':''}>양면 (×2)</option>
+      </select>
+    </div>
+    <div class="equip-capa" id="ec-${eq.id}">-</div>
+    <button class="btn-del-eq" onclick="removeEquip(${g.id},${eq.id})">✕</button>`;
+}
+
+function renderEquip(g,eq){
+  const list=document.getElementById(`el-${g.id}`);
+  const row=document.createElement('div');
+  row.id=`eq-${eq.id}`;
+  row.className=`equip-row er-${g.type}`;
+  row.innerHTML=equipRowHTML(g,eq);
+  list.appendChild(row);
+  row.querySelector(`#en-${eq.id}`).addEventListener('input',e=>{eq.name=e.target.value;});
+  row.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>syncEquip(eq,g.type)));
+}
+
+// ═══════════════════════
+// 동기화 & 계산
+// ═══════════════════════
+function syncEquip(eq,type){
+  if(type==='h'){ const v=parseFloat(document.getElementById(`es-${eq.id}`)?.value); if(!isNaN(v))eq.spd=v; }
+  else if(type==='v'){
+    eq.ctm=parseInt(document.getElementById(`em-${eq.id}`)?.value)||0;
+    eq.cts=parseInt(document.getElementById(`esc-${eq.id}`)?.value)||0;
+    eq.pnl=parseInt(document.getElementById(`ep-${eq.id}`)?.value)||60;
+  } else {
+    eq.takt=parseFloat(document.getElementById(`et-${eq.id}`)?.value)||30;
+    eq.sides=parseInt(document.getElementById(`esid-${eq.id}`)?.value)||1;
+  }
+}
+
+function calcEquipHr(eq,g){
+  const pLen=(g.pLen||500)/1000, pWid=(g.pWid||400)/1000;
+  const area=pLen*pWid;
+  if(g.type==='h'){
+    const jig=(g.jig||150)/1000, gap=(g.gap||100)/1000, pitch=jig+gap;
+    if(eq.spd>0&&pitch>0&&pLen>0) return (eq.spd/pitch)*pLen*60;
+  } else if(g.type==='v'){
+    const ct=eq.ctm*60+eq.cts;
+    if(ct>0&&eq.pnl>0&&area>0) return (3600/ct)*eq.pnl*area;
+  } else {
+    if(eq.takt>0&&eq.sides>=1&&area>0) return (3600/(eq.takt*eq.sides))*area;
+  }
+  return NaN;
+}
+
+function liveAll(){
+  const gOEE=n('g_oee')/100, gYld=n('g_yld')/100, gHr=n('g_hr'), gDay=n('g_day');
+  for(const g of groups){
+    let totHr=0,valid=true;
+    for(const eq of g.equips){
+      syncEquip(eq,g.type);
+      const hr=calcEquipHr(eq,g);
+      const el=document.getElementById(`ec-${eq.id}`);
+      if(!isNaN(hr)){totHr+=hr; if(el)el.textContent=`${hr.toFixed(2)} m²/hr`;}
+      else{valid=false; if(el)el.textContent='-';}
+    }
+    const badge=document.getElementById(`gcb-${g.id}`);
+    if(valid&&totHr>0&&badge){
+      badge.textContent=`${totHr.toFixed(1)} m²/hr`;
+      badge.className=`group-capa-badge r${g.type}`;
+    } else if(badge){badge.textContent='- m²/hr';badge.className='group-capa-badge';}
+    const gsEl=document.getElementById(`gs-${g.id}`);
+    if(valid&&totHr>0&&!isNaN(gOEE)&&!isNaN(gYld)&&!isNaN(gHr)&&!isNaN(gDay)){
+      const hrR=totHr*gOEE*gYld, dayR=hrR*gHr, monR=dayR*gDay;
+      if(gsEl)gsEl.style.display='flex';
+      const t=document.getElementById(`gst-${g.id}`);
+      const d=document.getElementById(`gsd-${g.id}`);
+      const m=document.getElementById(`gsm-${g.id}`);
+      if(t)t.textContent=`${totHr.toFixed(2)} m²/hr`;
+      if(d)d.textContent=`${Math.round(dayR).toLocaleString()} m²`;
+      if(m)m.textContent=`${Math.round(monR).toLocaleString()} m²`;
+    } else if(gsEl)gsEl.style.display='none';
+  }
+}
+
+// ═══════════════════════
+// 최종 계산
+// ═══════════════════════
+function calculate(){
+  const gHr=n('g_hr'),gDay=n('g_day'),gOEE=n('g_oee')/100,gYld=n('g_yld')/100;
+  if([gHr,gDay,gOEE,gYld].some(isNaN)){alert('운영 조건을 모두 입력해 주세요.');return;}
+  if(groups.length===0){alert('그룹을 1개 이상 추가해 주세요.');return;}
+
+  const res=[];
+  for(const g of groups){
+    if(g.equips.length===0){alert(`[${g.name}] 설비를 1개 이상 추가해 주세요.`);return;}
+    let totHr=0;
+    const eqRes=[];
+    for(const eq of g.equips){
+      syncEquip(eq,g.type);
+      const hr=calcEquipHr(eq,g);
+      if(isNaN(hr)){alert(`[${g.name} › ${eq.name}] 입력값을 확인해 주세요.`);return;}
+      totHr+=hr;
+      let spec='';
+      if(g.type==='h') spec=`${eq.spd} m/min`;
+      else if(g.type==='v') spec=`${eq.ctm}분${eq.cts}초 / ${eq.pnl}pnl`;
+      else spec=`${eq.takt}초 × ${eq.sides===2?'양면':'단면'}`;
+      eqRes.push({...eq,hr,spec});
+    }
+    const hrReal=totHr*gOEE*gYld;
+    res.push({id:g.id,name:g.name,type:g.type,totHr,hrReal,
+      dayReal:hrReal*gHr, monReal:hrReal*gHr*gDay, equips:eqRes});
+  }
+
+  const monVals=res.map(r=>r.monReal);
+  const minMon=Math.min(...monVals), maxMon=Math.max(...monVals);
+  const bnIdx=res.findIndex(r=>r.monReal===minMon);
+
+  document.getElementById('sum-grid').innerHTML=`
+    <div class="sum-card hl">
+      <div class="lbl">전체 月 캐파 (병목 기준)</div>
+      <div class="val">${Math.round(minMon).toLocaleString()}</div>
+      <div class="sub">m² / 월</div>
+    </div>
+    <div class="sum-card">
+      <div class="lbl">일 캐파 (병목 기준)</div>
+      <div class="val" style="font-size:18px">${Math.round(minMon/gDay).toLocaleString()}</div>
+      <div class="sub">m² / day</div>
+    </div>
+    <div class="sum-card">
+      <div class="lbl">병목 그룹</div>
+      <div class="val" style="font-size:13px;color:var(--red);padding-top:5px;line-height:1.4">${res[bnIdx].name}</div>
+      <div class="sub">${Math.round(minMon).toLocaleString()} m²/월</div>
+    </div>
+    <div class="sum-card">
+      <div class="lbl">적용 효율</div>
+      <div class="val" style="font-size:16px;padding-top:4px">${(gOEE*100).toFixed(0)}% × ${(gYld*100).toFixed(0)}%</div>
+      <div class="sub">OEE × Yield = ${(gOEE*gYld*100).toFixed(1)}%</div>
+    </div>
+  `;
+
+  const balRows=document.getElementById('bal-rows');
+  balRows.innerHTML='';
+  res.forEach((r,i)=>{
+    const isBn=i===bnIdx;
+    const pct=(r.monReal/maxMon*100);
+    const color=TYPE_COLOR[r.type];
+    const barColor=isBn?'var(--red)':color;
+    const row=document.createElement('div');
+    row.className='bal-row';
+    row.innerHTML=`
+      <div class="bal-name" style="color:${isBn?'var(--red)':color}">${isBn?'⚠ ':''}<strong>${r.name}</strong>
+        <span style="font-size:9px;color:${color};margin-left:4px;font-family:monospace;">[${TYPE_LABEL[r.type]}]</span>
+      </div>
+      <div class="bal-bar-wrap">
+        <div class="bal-bar-fill" style="width:${pct.toFixed(1)}%;background:${barColor};">
+          ${pct>=15?pct.toFixed(0)+'%':''}
+        </div>
+      </div>
+      <div class="bal-val" style="color:${isBn?'var(--red)':color}">${Math.round(r.monReal).toLocaleString()}</div>
+      <div class="bal-sub">${r.equips.length}대</div>
+    `;
+    balRows.appendChild(row);
+  });
+
+  const detGrid=document.getElementById('det-grid');
+  detGrid.innerHTML='';
+  res.forEach((r,i)=>{
+    const isBn=i===bnIdx;
+    const color=TYPE_COLOR[r.type];
+    const typeFull=r.type==='h'?'수평 · 속도기반':r.type==='v'?'수직 · 바스켓사이클':'Takt Time · 장당 사이클';
+    const eqRows=r.equips.map(eq=>`
+      <div class="det-eq-row">
+        <span>${eq.name}</span>
+        <span class="ev">${eq.spec}</span>
+        <span class="ev ac">${eq.hr.toFixed(2)} m²/hr</span>
+      </div>`).join('');
+    const card=document.createElement('div');
+    card.className=`det-card type-${r.type}${isBn?' bn-card':''}`;
+    card.innerHTML=`
+      <div class="det-top-bar"></div>
+      <div class="det-hd">
+        <span class="det-name">${r.name}</span>
+        <span class="det-tag ${isBn?'bn':'ok'}">${isBn?'⚠ BOTTLENECK':'✓ OK'}</span>
+      </div>
+      <div class="det-rows">
+        <div class="det-row"><span class="dk">유형</span><span class="dv">${typeFull}</span></div>
+        <div class="det-row"><span class="dk">설비 수</span><span class="dv">${r.equips.length}대</span></div>
+        <div class="det-row"><span class="dk">이론 캐파/hr (합산)</span><span class="dv">${r.totHr.toFixed(2)} m²/hr</span></div>
+        <div class="det-row"><span class="dk">실가동 캐파/hr</span><span class="dv">${r.hrReal.toFixed(2)} m²/hr</span></div>
+        <div class="det-row"><span class="dk">일 캐파</span><span class="dv">${Math.round(r.dayReal).toLocaleString()} m²/day</span></div>
+        <div class="det-row">
+          <span class="dk" style="font-weight:700;color:var(--text)">月 캐파</span>
+          <span class="dv big" style="color:${color}">${Math.round(r.monReal).toLocaleString()} m²/월</span>
+        </div>
+      </div>
+      <div class="det-equips">
+        <div class="det-equips-title">설비 구성</div>
+        <div class="det-eq-row" style="color:var(--muted);">
+          <span>설비명</span><span class="ev">사양</span><span class="ev">캐파/hr</span>
+        </div>
+        ${eqRows}
+      </div>`;
+    detGrid.appendChild(card);
+  });
+
+  document.getElementById('results').classList.add('on');
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+
+// ═══════════════════════
+// 초기 데이터
+// ═══════════════════════
+addGroup({name:'전처리', type:'h', pLen:500, pWid:400, jig:150, gap:100, equips:[
+  {name:'전처리 1호기', spd:3.0},
+  {name:'전처리 2호기', spd:3.0},
+]});
+addGroup({name:'노광', type:'t', pLen:500, pWid:400, equips:[
+  {name:'노광기 #1', takt:45, sides:2},
+]});
+addGroup({name:'수직라인 (ENIG)', type:'v', pLen:500, pWid:400, equips:[
+  {name:'ENIG Line #1', ctm:6, cts:30, pnl:60},
+]});
+addGroup({name:'AOI 검사', type:'t', pLen:500, pWid:400, equips:[
+  {name:'AOI #1', takt:20, sides:1},
+]});
+addGroup({name:'수세', type:'h', pLen:500, pWid:400, jig:150, gap:100, equips:[
+  {name:'수세기 1호기', spd:2.5},
+]});
+</script>
+</body>
+</html>
